@@ -1,0 +1,72 @@
+"""Merge settings so installing twice preserves existing site configuration."""
+import json
+
+from plone.base.interfaces.controlpanel import IFilterSchema, ITinyMCESchema
+from plone.base.interfaces.resources import IBundleRegistry
+from plone.registry.interfaces import IRegistry
+from zope.component import getUtility
+from .interfaces import IAgoraSyncSettings, ensure_settings_registry
+
+TEMPLATE = {
+    "title": "Àgora component",
+    "description": "Insert Agora, then use the Àgora template button to edit domain and path.",
+    "content": '<agora-component domain="https://aupaeu.widening.eu/" '
+               'url="/event-catalogue-no-menu" auto-resize="true" sync="false" '
+               'display-domain="odoo"></agora-component>',
+}
+
+
+def append_unique(values, additions):
+    return list(dict.fromkeys(list(values or []) + additions))
+
+
+def install(context):
+    registry = getUtility(IRegistry)
+    ensure_settings_registry(registry)
+    filters = registry.forInterface(IFilterSchema, prefix="plone")
+    filters.valid_tags = append_unique(filters.valid_tags, ["agora-component"])
+    filters.custom_attributes = append_unique(
+        filters.custom_attributes, ["domain", "url", "auto-resize", "sync", "catalogue-model", "sync-parent", "display-domain"]
+    )
+    tiny = registry.forInterface(ITinyMCESchema, prefix="plone")
+    tiny.custom_plugins = [p for p in (tiny.custom_plugins or [])
+                           if p.split("|", 1)[0] != "agora"] + [
+        "agora|++resource++collective.agora/plugin.js?v=3"
+    ]
+    tiny.custom_buttons = append_unique(tiny.custom_buttons, ["agora"])
+    tiny.plugins = append_unique(tiny.plugins, ["template"])
+    templates = json.loads(tiny.templates or "[]")
+    if templates == {}:
+        templates = []
+    if not isinstance(templates, list):
+        raise ValueError("TinyMCE templates must be a JSON list before installing Agora")
+    if not any(t.get("title") == TEMPLATE["title"] for t in templates):
+        templates.append(TEMPLATE)
+    tiny.templates = json.dumps(templates, ensure_ascii=False)
+    options = json.loads(tiny.other_settings or "{}")
+    custom = options.get("custom_elements", "")
+    if isinstance(custom, dict):
+        custom.setdefault("agora-component", {"extends": "div"})
+    else:
+        custom = ",".join(append_unique(
+            [x.strip() for x in custom.split(",") if x.strip()], ["agora-component"]
+        ))
+    options["custom_elements"] = custom
+    extended = options.get("extended_valid_elements", "")
+    options["extended_valid_elements"] = ",".join(append_unique(
+        [x for x in extended.split(",") if x],
+        ["agora-component[domain|url|auto-resize|sync|catalogue-model|sync-parent|display-domain|class|style]"]
+    ))
+    tiny.other_settings = json.dumps(options)
+    tiny.content_css = append_unique(tiny.content_css, [
+        "++resource++collective.agora/editor.css"
+    ])
+    prefix = "plone.bundles/collective-agora"
+    registry.registerInterface(IBundleRegistry, prefix=prefix)
+    bundle = registry.forInterface(IBundleRegistry, prefix=prefix)
+    bundle.enabled = True
+    bundle.jscompilation = "++resource++collective.agora/loader.js?v=4"
+    bundle.csscompilation = "++resource++collective.agora/site.css"
+    bundle.load_defer = True
+    bundle.depends = "plone"
+    bundle.compile = False

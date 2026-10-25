@@ -1,0 +1,16 @@
+<configure xmlns="http://namespaces.zope.org/zope"
+           xmlns:browser="http://namespaces.zope.org/browser"
+           xmlns:genericsetup="http://namespaces.zope.org/genericsetup">
+  <browser:page name="agora-sync" for="Products.CMFCore.interfaces.ISiteRoot"
+      class=".browser.AgoraSyncView" permission="cmf.ModifyPortalContent" />
+  <browser:page name="agora-sync-settings" for="Products.CMFCore.interfaces.ISiteRoot"
+      class=".controlpanel.AgoraSyncControlPanelView" permission="cmf.ManagePortal" />
+  <browser:page name="agora-detail"
+      for="plone.app.contenttypes.interfaces.IDocument"
+      class=".views.AgoraDetailView" permission="zope2.View" />
+  <browser:resourceDirectory name="collective.agora" directory="static" />
+  <genericsetup:registerProfile name="default" title="Agora TinyMCE templates"
+      description="Two-field Agora template, HTML filtering and JavaScript resources."
+      directory="profiles/default" provides="Products.GenericSetup.interfaces.EXTENSION"
+      post_handler=".setuphandlers.install" />
+</configure>

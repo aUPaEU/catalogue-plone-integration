@@ -1,0 +1,11 @@
+agora-component {
+  display: block;
+  min-height: 4rem;
+  padding: 1rem;
+  border: 2px dashed #39758c;
+  background: #f0f7fa;
+}
+agora-component::before {
+  content: "Àgora: " attr(domain) attr(url) " — select and use Àgora template to edit";
+  font: 14px sans-serif;
+}

@@ -1,0 +1,17 @@
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:metal="http://xml.zope.org/namespaces/metal"
+      xmlns:tal="http://xml.zope.org/namespaces/tal"
+      metal:use-macro="context/main_template/macros/master">
+  <metal:main fill-slot="main">
+    <div class="agora-mirrored-detail">
+      <tal:inline replace="structure view/inline_styles" />
+      <tal:stylesheet repeat="stylesheet view/stylesheets">
+        <style type="text/css" tal:condition="stylesheet/css"
+               tal:content="structure stylesheet/css" />
+        <link rel="stylesheet" tal:condition="stylesheet/url"
+              tal:attributes="href stylesheet/url" />
+      </tal:stylesheet>
+      <div tal:content="structure view/html" />
+    </div>
+  </metal:main>
+</html>

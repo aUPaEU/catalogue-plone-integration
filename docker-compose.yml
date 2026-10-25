@@ -1,0 +1,22 @@
+services:
+  plone:
+    image: plone/plone-backend:${PLONE_VERSION:-6.2}
+    container_name: tinymce-plone
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      SITE: Plone1
+      TYPE: classic
+      DEVELOP: /app/addons/collective.agora
+      PIP_PARAMS: --no-build-isolation --no-deps
+    command: ["bash", "/app/agora-scripts/start-agora.sh"]
+    ports:
+      - "8080:8080"
+    volumes:
+      - plone-data:/data
+      - ./addons:/app/addons
+      - ./scripts:/app/agora-scripts:ro
+    restart: unless-stopped
+
+volumes:
+  plone-data:
