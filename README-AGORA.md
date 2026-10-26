@@ -38,6 +38,12 @@ Also configure **Odoo browser base URL** with the origin that visitors can
 reach, for example `https://agora.unite-university.eu` in production. This is
 separate from the API URL: Plone uses the API URL internally, while links,
 images, and share URLs written into synchronized pages use the browser URL.
+
+The same panel contains the automatic synchronization worker settings. When
+enabled, the worker scans Plone pages for Agora components with a
+`catalogue-model` attribute and synchronizes each discovered model at the
+selected minute, hourly, or daily interval. Daily runs use the configured
+24-hour time. The worker is disabled by default.
 When the field is empty in the local Compose setup, `host.docker.internal` is
 automatically converted to `localhost`.
 
@@ -287,6 +293,11 @@ envia la seva alçada al webcomponent mitjançant `postMessage`. Com que
 no pot calcular directament l’alçada del seu contingut. Si la pàgina Àgora no
 envia aquest missatge, el component es queda amb una alçada fixa i mostra una
 barra de desplaçament interna.
+
+Quan hi ha diversos components a la mateixa pàgina, el carregador de Plone
+associa cada missatge de mida amb el seu propi iframe. Per tant, cada model pot
+canviar d'alçada independentment; la pàgina remota encara ha d'enviar el
+missatge de mida.
 
 Per confirmar-ho, prova temporalment una alçada fixa a la plantilla:
 

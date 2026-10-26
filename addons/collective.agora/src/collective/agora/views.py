@@ -1,6 +1,9 @@
 from Products.Five.browser import BrowserView
 from Products.Five.browser.pagetemplatefile import ViewPageTemplateFile
 from zope.annotation import IAnnotations
+from zope.interface import alsoProvides
+
+from plone.app.layout.globals.interfaces import IViewView
 
 from .detail_fragment import (
     extract_display_content,
@@ -11,6 +14,7 @@ from .detail_fragment import (
     repair_browser_urls,
     rewrite_breadcrumb_link,
 )
+from .interfaces import IAgoraSyncedDocument
 
 
 class AgoraDetailView(BrowserView):
@@ -50,4 +54,15 @@ class AgoraDetailView(BrowserView):
         return [{'css': '', 'url': repair_browser_urls(url)} for url in urls]
 
     def __call__(self):
+        # The navigation portlet uses this marker to expand the catalogue
+        # container and list all of its synced sibling pages.
+        if not IAgoraSyncedDocument.providedBy(self.context):
+            alsoProvides(self.context, IAgoraSyncedDocument)
+        # Mark this custom page as a normal Plone view so inherited portlet
+        # columns (including the Navigation portlet) are rendered.
+        if not IViewView.providedBy(self):
+            alsoProvides(self, IViewView)
+        # The custom browser page is otherwise treated as a full-width view by
+        # some Plone themes.  Explicitly enable the standard left column.
+        self.request.set('disable_plone.leftcolumn', False)
         return self.index()

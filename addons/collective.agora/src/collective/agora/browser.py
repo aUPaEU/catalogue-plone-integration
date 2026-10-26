@@ -8,9 +8,10 @@ from Products.Five.browser import BrowserView
 from plone.registry.interfaces import IRegistry
 from zope.component import getUtility
 from zope.annotation import IAnnotations
+from zope.interface import alsoProvides
 from plone.app.textfield.value import RichTextValue
 
-from .interfaces import IAgoraSyncSettings, ensure_settings_registry
+from .interfaces import IAgoraSyncSettings, IAgoraSyncedDocument, ensure_settings_registry
 from .detail_fragment import (
     absolutize_css_urls,
     extract_detail_fragment,
@@ -190,6 +191,8 @@ class AgoraSyncView(BrowserView):
                     if document is None:
                         folder.invokeFactory('Document', id=document_id, title=title)
                         document = folder.get(document_id)
+                    if not IAgoraSyncedDocument.providedBy(document):
+                        alsoProvides(document, IAgoraSyncedDocument)
                     if hasattr(document, 'setLayout'):
                         document.setLayout('agora-detail')
                     document.title = title

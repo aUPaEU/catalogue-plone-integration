@@ -1,5 +1,5 @@
 from zope.interface import Interface
-from zope.schema import Password, TextLine
+from zope.schema import Bool, Choice, Password, TextLine
 
 
 class IAgoraSyncSettings(Interface):
@@ -20,14 +20,29 @@ class IAgoraSyncSettings(Interface):
         description="Stored in Plone and used only by the server-side synchronizer.",
         required=False,
     )
-    default_parent_path = TextLine(
-        title="Default Plone parent path",
-        description="Legacy setting; catalogue pages now always use resources/{model}/{id}.",
+    scheduler_enabled = Bool(
+        title="Enable automatic synchronization",
+        description="Synchronize catalogue models found in Agora components automatically.",
         required=False,
-        default="",
+        default=False,
+    )
+    scheduler_frequency = Choice(
+        title="Synchronization frequency",
+        description="How often automatic synchronization runs.",
+        vocabulary="collective.agora.frequencies",
+        required=False,
+        default="hour",
+    )
+    scheduler_time = TextLine(
+        title="Daily synchronization time",
+        description="24-hour time (HH:MM), used when frequency is daily.",
+        required=False,
+        default="02:00",
     )
 
 
+class IAgoraSyncedDocument(Interface):
+    """Marker for catalogue detail pages managed by Agora synchronization."""
 def ensure_settings_registry(registry):
     """Register settings for sites installed before this add-on version."""
     # RegistryEditForm calls forInterface(schema) without a custom prefix.

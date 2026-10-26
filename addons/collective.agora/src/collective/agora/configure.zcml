@@ -1,6 +1,11 @@
 <configure xmlns="http://namespaces.zope.org/zope"
            xmlns:browser="http://namespaces.zope.org/browser"
            xmlns:genericsetup="http://namespaces.zope.org/genericsetup">
+  <utility component=".vocabularies.frequencies"
+      provides="zope.schema.interfaces.IVocabularyFactory"
+      name="collective.agora.frequencies" />
+  <subscriber for="zope.processlifetime.IProcessStarting"
+      handler=".scheduler.start_scheduler" />
   <browser:page name="agora-sync" for="Products.CMFCore.interfaces.ISiteRoot"
       class=".browser.AgoraSyncView" permission="cmf.ModifyPortalContent" />
   <browser:page name="agora-sync-settings" for="Products.CMFCore.interfaces.ISiteRoot"
@@ -8,6 +13,7 @@
   <browser:page name="agora-detail"
       for="plone.app.contenttypes.interfaces.IDocument"
       class=".views.AgoraDetailView" permission="zope2.View" />
+  <adapter factory=".navigation.AgoraNavtreeStrategy" />
   <browser:resourceDirectory name="collective.agora" directory="static" />
   <genericsetup:registerProfile name="default" title="Agora TinyMCE templates"
       description="Two-field Agora template, HTML filtering and JavaScript resources."

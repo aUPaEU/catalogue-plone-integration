@@ -1,4 +1,5 @@
 agora-component { display: block; width: 100%; }
+agora-component[hidden] { display: none !important; }
 
 /* Local fallback for Odoo's Font Awesome icon classes. Some Plone pages do
    not load Odoo's font files, which otherwise leaves an empty square. */
