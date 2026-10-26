@@ -7,6 +7,8 @@ from .detail_fragment import (
     extract_detail_section,
     extract_inline_styles,
     extract_stylesheet_urls,
+    remove_share_controls,
+    repair_browser_urls,
     rewrite_breadcrumb_link,
 )
 
@@ -19,7 +21,9 @@ class AgoraDetailView(BrowserView):
     @property
     def html(self):
         text = getattr(self.context, 'text', None)
-        html = extract_display_content(getattr(text, 'raw', text) or '')
+        html = remove_share_controls(repair_browser_urls(
+            extract_display_content(getattr(text, 'raw', text) or '')
+        ))
         catalogue_path = IAnnotations(self.context).get(
             'collective.agora.catalogue_path',
         )
@@ -31,7 +35,8 @@ class AgoraDetailView(BrowserView):
     @property
     def inline_styles(self):
         text = getattr(self.context, 'text', None)
-        return extract_inline_styles(getattr(text, 'raw', text) or '')
+        stored = IAnnotations(self.context).get('collective.agora.inline_styles', '')
+        return repair_browser_urls(stored or extract_inline_styles(getattr(text, 'raw', text) or ''))
 
     @property
     def stylesheets(self):
@@ -41,8 +46,8 @@ class AgoraDetailView(BrowserView):
         # New synchronized documents store CSS text, while older documents
         # may still contain only stylesheet URLs.
         if stored:
-            return [{'css': css, 'url': ''} for css in stored]
-        return [{'css': '', 'url': url} for url in urls]
+            return [{'css': repair_browser_urls(css), 'url': ''} for css in stored]
+        return [{'css': '', 'url': repair_browser_urls(url)} for url in urls]
 
     def __call__(self):
         return self.index()

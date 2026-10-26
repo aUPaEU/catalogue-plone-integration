@@ -34,6 +34,13 @@ the API URL. Use `http://host.docker.internal:8010/catalogue-api/v2`; the local
 Compose configuration maps this name to the Docker host. If Odoo is another
 container, use its Docker service hostname instead.
 
+Also configure **Odoo browser base URL** with the origin that visitors can
+reach, for example `https://agora.unite-university.eu` in production. This is
+separate from the API URL: Plone uses the API URL internally, while links,
+images, and share URLs written into synchronized pages use the browser URL.
+When the field is empty in the local Compose setup, `host.docker.internal` is
+automatically converted to `localhost`.
+
 Inserting or updating through **Àgora template** automatically synchronizes the
 catalogue before inserting the component. Plone fetches every page of the JSON
 catalogue and each item's `/catalogue-api/v2/{model}/{id}?response=html` response.

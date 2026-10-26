@@ -30,6 +30,49 @@ _RETURN_LINK = re.compile(
     r'(<a\b[^>]*\bclass\s*=\s*["\'][^"\']*\bdetail-view-return-btn\b[^"\']*["\'][^>]*\bhref\s*=\s*["\'])[^"\']*(["\'])',
     re.IGNORECASE,
 )
+# Odoo includes this decorative link in the response.  Its Font Awesome icon
+# is not available in Plone, so it becomes a stray square above the breadcrumb.
+_BACK_TO_TOP = re.compile(
+    r'<a\b[^>]*>\s*<i\b[^>]*\bfa-arrow-up\b[^>]*>.*?</i>\s*</a>',
+    re.IGNORECASE | re.DOTALL,
+)
+_HIDDEN_TOP = re.compile(
+    r'<(?:div|span)\b[^>]*\bid\s*=\s*["\']top["\'][^>]*>.*?</(?:div|span)>',
+    re.IGNORECASE | re.DOTALL,
+)
+_SHARE_LABEL = re.compile(
+    r'<(?:span|div)\b[^>]*\bclass\s*=\s*["\'][^"\']*\bdetail-share-actions-label\b[^"\']*["\'][^>]*>.*?</(?:span|div)>',
+    re.IGNORECASE | re.DOTALL,
+)
+_SHARE_CONTROL = re.compile(
+    r'<(?:a|button)\b[^>]*\bclass\s*=\s*["\'][^"\']*\bdetail-view-share-button\b[^"\']*["\'][^>]*>.*?</(?:a|button)>',
+    re.IGNORECASE | re.DOTALL,
+)
+_DUPLICATE_PORT = re.compile(
+    r'(?P<scheme>https?)://(?P<host>[^/\s:]+):(?P<port>\d+):(?P=port)(?P<rest>[^\s"\'<>]*)',
+    re.IGNORECASE,
+)
+
+
+def repair_browser_urls(value):
+    """Repair malformed URLs saved by older synchronization versions."""
+    if not value:
+        return value or ''
+    value = _DUPLICATE_PORT.sub(
+        r'\g<scheme>://\g<host>:\g<port>\g<rest>', value,
+    )
+    return value.replace('http://host.docker.internal:8010', 'http://localhost:8010')
+
+
+def remove_back_to_top_controls(value):
+    """Remove Odoo's icon-only back-to-top controls from the detail fragment."""
+    return _HIDDEN_TOP.sub('', _BACK_TO_TOP.sub('', value or ''))
+
+
+def remove_share_controls(value):
+    """Remove Odoo's social-sharing controls while keeping other actions."""
+    value = value or ''
+    return _SHARE_CONTROL.sub('', _SHARE_LABEL.sub('', value))
 
 
 def extract_detail_fragment(value):
@@ -62,7 +105,9 @@ def extract_detail_fragment(value):
 
     stylesheets = _STYLESHEET.findall(value)
     styles = _INLINE_STYLE.findall(value)
-    section = _INLINE_STYLE.sub('', value[start_match.start():end])
+    section = remove_share_controls(remove_back_to_top_controls(
+        _INLINE_STYLE.sub('', value[start_match.start():end])
+    ))
     return ''.join(stylesheets + styles) + section
 
 
@@ -112,7 +157,7 @@ def extract_display_content(value):
         if _same_markup(prefix, managed):
             prefix = ''
         value = prefix + managed + suffix
-        return _INLINE_STYLE.sub('', _STYLESHEET.sub('', value))
+        return remove_back_to_top_controls(_INLINE_STYLE.sub('', _STYLESHEET.sub('', value)))
     return extract_detail_section(value)
 
 

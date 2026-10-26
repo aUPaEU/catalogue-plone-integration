@@ -9,3 +9,140 @@ agora-component::before {
   content: "Àgora: " attr(domain) attr(url) " — select and use Àgora template to edit";
   font: 14px sans-serif;
 }
+
+/*
+ * The synchronized detail fragment is rendered inside TinyMCE's iframe while
+ * an author edits a page.  The live Odoo stylesheet is intentionally not
+ * loaded there: it contains application-specific rules (and modern CSS
+ * nesting) which are not reliable in the editor iframe.  These rules provide
+ * the same useful layout and visual hierarchy without changing the saved
+ * markup or the published page.
+ */
+body.mce-content-body {
+  margin: 0;
+  padding: .5rem;
+  background: #fff;
+  color: #333;
+  font-family: Arial, Helvetica, sans-serif;
+  line-height: 1.45;
+}
+
+/* Font Awesome is not available inside TinyMCE's isolated iframe. Keep the
+   common Agora icons recognizable while editing mirrored detail content. */
+.fa-external-link::before { content: "↗"; }
+.fa-arrow-left::before { content: "←"; }
+.fa-arrow-up::before { content: "↑"; }
+.fa-link::before { content: "↗"; }
+
+.detail-view-container {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 1.5rem 0;
+  background: #fff;
+}
+
+.detail-view-container .container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 0 0 1.5rem;
+  padding: .75rem 1rem;
+  background: #e9ecef;
+  list-style: none;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+  content: "/";
+  margin: 0 .55rem 0 .35rem;
+  color: #777;
+}
+
+.detail-view-return-btn-wrapper {
+  margin: 0 0 1rem;
+}
+
+.detail-view-return-btn {
+  color: #1677b8;
+  text-decoration: none;
+}
+
+.detail-view-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 2rem;
+}
+
+.detail-view-left-column,
+.detail-view-right-column {
+  box-sizing: border-box;
+  min-width: 280px;
+}
+
+.detail-view-left-column {
+  flex: 1 1 52%;
+}
+
+.detail-view-right-column {
+  flex: 1 1 38%;
+  max-width: 440px;
+}
+
+.detail-view-title {
+  margin: 0 0 1rem;
+  color: #555;
+  font-size: 2rem;
+  line-height: 1.2;
+}
+
+.detail-view-summary {
+  display: block;
+  margin-bottom: 1rem;
+  color: #666;
+}
+
+.detail-view-details {
+  display: block;
+}
+
+.detail-view-field {
+  min-width: 0;
+  padding: .75rem 0 1.25rem;
+}
+
+.detail-view-field-title {
+  margin: 0 0 .45rem;
+  color: #679bf0;
+  font-size: 1.15rem;
+  line-height: 1.25;
+}
+
+.detail-view-field-value {
+  color: #333;
+}
+
+.detail-view-field .tag {
+  display: inline-block;
+  padding: .2rem .5rem;
+  border-radius: 3px;
+  background: #e3e3e3;
+  color: #787878;
+}
+
+.detail-view-image {
+  max-width: 100%;
+  height: auto;
+}
+
+@media (max-width: 700px) {
+  .detail-view-left-column,
+  .detail-view-right-column {
+    flex-basis: 100%;
+    max-width: none;
+  }
+}

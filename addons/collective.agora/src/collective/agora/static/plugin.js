@@ -2,6 +2,50 @@
 (function () {
   "use strict";
   tinymce.PluginManager.add("agora", function (editor) {
+    // The legacy embed instructions include a script which creates the Agora
+    // bundle tag. Plone intentionally filters arbitrary scripts, and the
+    // installed loader already loads that bundle. Remove only this recognized
+    // bootstrap when it is pasted together with an Agora component; leave all
+    // other pasted content to TinyMCE's normal filtering.
+    function decodeEscapedMarkup(content) {
+      if (!/&lt;\s*agora-component\b/i.test(content || "")) return content;
+      const textarea = document.createElement("textarea");
+      textarea.innerHTML = content;
+      return textarea.value;
+    }
+
+    function normalizePastedContent(content) {
+      let normalized = content || "";
+      // Some copy/paste sources escape every opening tag as \<tag>. Restrict
+      // this repair to Agora markup so ordinary prose containing backslashes
+      // is left unchanged.
+      if (/\\<\s*agora-component\b/i.test(normalized)) {
+        normalized = normalized.replace(/\\(?=<)/g, "");
+      }
+      const decoded = decodeEscapedMarkup(normalized);
+      if (!/<agora-component\b/i.test(decoded || "")) return content;
+      return decoded.replace(
+        /<script\b[^>]*>[\s\S]*?<\/script\s*>/gi,
+        function (script) {
+          return /agora-bundle|createElement\s*\(\s*["']script["']\s*\)/i.test(script)
+            ? ""
+            : script;
+        }
+      ).replace(
+        /(<(?:button|a)\b[^>]*?)\s+onclick\s*=\s*["']\s*navigateTo\(\s*["']([^"']+)["']\s*\)["']/gi,
+        function (_, prefix, path) {
+          return prefix + ' data-agora-url="' + path.replace(/&/g, "&amp;").replace(/"/g, "&quot;") + '"';
+        }
+      );
+    }
+
+    editor.on("PastePreProcess", function (event) {
+      event.content = normalizePastedContent(event.content);
+    });
+    editor.on("BeforeSetContent", function (event) {
+      event.content = normalizePastedContent(event.content);
+    });
+
     function getSiteUrl() {
       const portalUrl = document.body.dataset.portalUrl || window.PORTAL_URL;
       if (portalUrl) return new URL(portalUrl, window.location.href).href.replace(/\/$/, "");

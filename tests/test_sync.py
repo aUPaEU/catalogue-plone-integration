@@ -8,7 +8,7 @@ from collective.agora.browser import AgoraSyncView
 from collective.agora.views import AgoraDetailView
 from collective.agora.detail_fragment import (
     extract_detail_fragment, extract_inline_styles, extract_display_content,
-    merge_synced_fragment,
+    merge_synced_fragment, remove_back_to_top_controls,
 )
 
 MODEL = 'alliance_catalogue_app.researchproposals'
@@ -75,18 +75,21 @@ class SyncTest(unittest.TestCase):
         self.assertEqual(list(self.site), ['resources'])
         self.assertEqual(doc.layout, 'agora-detail')
         self.assertIn('media="screen"', doc.text.raw)
+        self.assertIn('media="screen"', doc.annotations['collective.agora.inline_styles'])
         self.assertIn('http://localhost:8010/web/image/3', doc.text.raw)
         self.assertIn('http://localhost:8010/web/image/1', doc.text.raw)
         self.assertNotIn('Odoo navigation', doc.text.raw)
         self.assertNotIn('Odoo footer', doc.text.raw)
         self.assertEqual(get.call_args_list[2].args[0], API + '/' + MODEL + '/3?response=html')
         self.assertEqual(get.call_count, 6, 'Embedded CSS must not require extra requests')
-        detail = AgoraDetailView(doc, self.request)
-        self.assertIn('media="screen"', detail.inline_styles)
         with patch('collective.agora.views.IAnnotations', lambda doc: doc.annotations):
+            detail = AgoraDetailView(doc, self.request)
+            self.assertIn('media="screen"', detail.inline_styles)
             self.assertNotIn('<style', detail.html)
             self.assertIn('Nested content', detail.html)
             self.assertEqual(detail.stylesheets, [])
+            doc.text = SimpleNamespace(raw='<!-- agora-sync-start --><section class="detail-view-container"><p>Proposal</p></section><!-- agora-sync-end -->')
+            self.assertIn('media="screen"', detail.inline_styles)
 
     def test_old_odoo_path_does_not_determine_location(self):
         item = {'id': 3, 'fields': {'detail_view_url': 'https://odoo.example/offering/42/3'}}
@@ -187,6 +190,15 @@ class SyncTest(unittest.TestCase):
         duplicate = imported + '<!-- agora-sync-start -->' + imported + '<!-- agora-sync-end -->'
         merged = merge_synced_fragment(duplicate, imported)
         self.assertEqual(merged.count('detail-view-container'), 1)
+
+    def test_odoo_back_to_top_control_is_removed(self):
+        value = ('<div id="top" style="display:none">Empty Top</div>'
+                 '<a href="/offering/19/1#top"><i class="fa fa-arrow-up"></i></a>'
+                 '<ol class="breadcrumb"><li>Courses</li></ol>')
+        cleaned = remove_back_to_top_controls(value)
+        self.assertNotIn('fa-arrow-up', cleaned)
+        self.assertNotIn('id="top"', cleaned)
+        self.assertIn('breadcrumb', cleaned)
 
 
 if __name__ == '__main__':

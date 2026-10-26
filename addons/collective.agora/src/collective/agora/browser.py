@@ -1,6 +1,6 @@
 import json
 import logging
-from urllib.parse import quote, urljoin
+from urllib.parse import quote, urljoin, urlsplit, urlunsplit
 
 import requests
 from lxml import html as html_parser
@@ -14,6 +14,7 @@ from .interfaces import IAgoraSyncSettings, ensure_settings_registry
 from .detail_fragment import (
     absolutize_css_urls,
     extract_detail_fragment,
+    extract_inline_styles,
     extract_stylesheet_urls,
     merge_synced_fragment,
 )
@@ -38,6 +39,51 @@ def _safe_site_path(value):
     if any(part in ('.', '..') for part in parts):
         raise ValueError('Invalid Plone catalogue path')
     return '/' + '/'.join(parts)
+
+
+def _public_browser_base(api_base_url, configured):
+    """Return the browser-facing Odoo origin without changing API requests."""
+    configured = str(configured or '').strip().rstrip('/')
+    if configured:
+        return configured
+    parts = urlsplit(api_base_url)
+    if parts.hostname == 'host.docker.internal':
+        # Useful default for the local compose setup. Production deployments
+        # should set browser_base_url to their public Odoo origin.
+        return urlunsplit((parts.scheme, 'localhost%s' % (':' + str(parts.port) if parts.port else ''), '', '', '')).rstrip('/')
+    return '%s://%s' % (parts.scheme, parts.netloc)
+
+
+def _rewrite_browser_urls(fragment, api_base_url, browser_base_url):
+    """Replace Docker/local Odoo origins in browser-visible HTML attributes."""
+    api_parts = urlsplit(api_base_url)
+    browser_parts = urlsplit(browser_base_url)
+    internal_hosts = {api_parts.hostname, 'host.docker.internal'}
+    if browser_parts.hostname not in internal_hosts:
+        internal_hosts.update({'localhost', '127.0.0.1'})
+    internal_origins = set()
+    for host in internal_hosts:
+        if not host:
+            continue
+        for scheme in ('http', 'https'):
+            internal_origins.add('%s://%s' % (scheme, host))
+            if api_parts.port:
+                internal_origins.add('%s://%s:%s' % (scheme, host, api_parts.port))
+    browser_origin = '%s://%s' % (browser_parts.scheme, browser_parts.netloc)
+    for element in fragment.iter():
+        for attribute, value in list(element.attrib.items()):
+            if not value:
+                continue
+            rewritten = value
+            # This also catches nested URLs such as the `u=` parameter in
+            # Facebook/LinkedIn share links.
+            # Replace the most specific origins first. Otherwise replacing
+            # ``http://localhost`` before ``http://localhost:8010`` leaves the
+            # port behind and produces malformed values such as ``:8010:8010``.
+            for origin in sorted(internal_origins, key=len, reverse=True):
+                rewritten = rewritten.replace(origin, browser_origin)
+            element.set(attribute, rewritten)
+    return fragment
 
 
 class AgoraSyncView(BrowserView):
@@ -94,6 +140,7 @@ class AgoraSyncView(BrowserView):
             return self._json({'error': 'model_name is required'}, 400)
         settings = self._settings()
         base_url = (settings.api_base_url or '').strip().rstrip('/')
+        browser_base_url = _public_browser_base(base_url, getattr(settings, 'browser_base_url', ''))
         token = settings.api_token or ''
         if not base_url or not token:
             return self._json({'error': 'Catalogue API is not configured in Plone'}, 503)
@@ -150,6 +197,7 @@ class AgoraSyncView(BrowserView):
                     # Resolve images, links and embedded CSS URLs against Odoo, not Plone.
                     fragment = html_parser.fragment_fromstring(detail_html, create_parent='div')
                     fragment.make_links_absolute(detail_url or api_detail_url)
+                    _rewrite_browser_urls(fragment, base_url, browser_base_url)
                     detail_html = ''.join(html_parser.tostring(child, encoding='unicode') for child in fragment)
                     previous_text = getattr(getattr(document, 'text', None), 'raw', '') or ''
                     document.text = RichTextValue(
@@ -175,6 +223,12 @@ class AgoraSyncView(BrowserView):
                                 stylesheet_url, exc_info=True,
                             )
                     IAnnotations(document)['collective.agora.stylesheets'] = stylesheets
+                    # Keep API-provided inline CSS outside RichTextValue. TinyMCE
+                    # may sanitize style elements while editing, but rendering
+                    # must remain identical after an editor save.
+                    IAnnotations(document)['collective.agora.inline_styles'] = extract_inline_styles(
+                        detail_response.text,
+                    )
                     if catalogue_path:
                         IAnnotations(document)['collective.agora.catalogue_path'] = catalogue_path
                     document.reindexObject()

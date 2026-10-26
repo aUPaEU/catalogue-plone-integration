@@ -10,6 +10,11 @@ class IAgoraSyncSettings(Interface):
         description="For example: https://odoo.example.org/catalogue-api/v2",
         required=False,
     )
+    browser_base_url = TextLine(
+        title="Odoo browser base URL",
+        description="Public Odoo origin used in links shown to browsers; leave empty for local Docker (host.docker.internal becomes localhost).",
+        required=False,
+    )
     api_token = Password(
         title="Odoo catalogue API token",
         description="Stored in Plone and used only by the server-side synchronizer.",

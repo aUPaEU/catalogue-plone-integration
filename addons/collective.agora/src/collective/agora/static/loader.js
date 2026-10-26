@@ -41,7 +41,57 @@
   });
 
   const preparedFrames = new WeakMap();
+  function wrapButtonLabels() {
+    document.querySelectorAll(".button-container .button, .agora-button-container .agora-button").forEach(function (button) {
+      // Older templates put the label directly in the button. Wrap it so the
+      // catalogue hover/selected pseudo-elements remain behind the label.
+      Array.from(button.childNodes).forEach(function (node) {
+        if (node.nodeType !== Node.TEXT_NODE || !node.textContent.trim()) return;
+        const label = document.createElement("span");
+        label.textContent = node.textContent;
+        node.replaceWith(label);
+      });
+    });
+  }
+  function wireNavigationButtons() {
+    wrapButtonLabels();
+    const component = document.querySelector("agora-component");
+    document.querySelectorAll("[data-agora-url]").forEach(function (button) {
+      if (button.dataset.agoraWired === "true") return;
+      button.dataset.agoraWired = "true";
+      button.addEventListener("click", function (event) {
+        const path = button.getAttribute("data-agora-url") || "";
+        const model = button.getAttribute("data-agora-model") || "";
+        if (!path.startsWith("/") || path.startsWith("//") || /[\\\s\x00-\x1f]/.test(path)) return;
+        if (model && !/^[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)+$/.test(model)) return;
+        const component = document.querySelector("agora-component");
+        if (!component) return;
+        event.preventDefault();
+        document.querySelectorAll(".button-container .button.selected, .agora-button-container .agora-button.selected")
+          .forEach(function (selected) { selected.classList.remove("selected"); });
+        button.classList.add("selected");
+        button.classList.add("clicked");
+        button.addEventListener("animationend", function () {
+          button.classList.remove("clicked");
+        }, {once: true});
+        if (model) component.setAttribute("catalogue-model", model);
+        component.setAttribute("url", path);
+        // Rebuild the iframe URL so detail_domain and detail_model reflect the
+        // selected catalogue before the new view is loaded.
+        load();
+        if (!model && typeof component.navigateTo === "function") component.navigateTo(path);
+      });
+    });
+    if (component) {
+      const currentModel = component.getAttribute("catalogue-model") || "";
+      document.querySelectorAll("[data-agora-model]").forEach(function (button) {
+        button.classList.toggle("selected", !!currentModel &&
+          button.getAttribute("data-agora-model") === currentModel);
+      });
+    }
+  }
   function load() {
+    wireNavigationButtons();
     if (!document.querySelector("agora-component")) return;
     // The upstream constructor reads attributes immediately and interpolates them
     // into iframe markup. Normalize all elements before registering the component.

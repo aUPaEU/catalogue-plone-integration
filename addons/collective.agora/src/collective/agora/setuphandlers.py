@@ -24,14 +24,25 @@ def install(context):
     registry = getUtility(IRegistry)
     ensure_settings_registry(registry)
     filters = registry.forInterface(IFilterSchema, prefix="plone")
-    filters.valid_tags = append_unique(filters.valid_tags, ["agora-component"])
+    # Odoo detail responses include embedded CSS.  Keep style elements in the
+    # editable RichTextValue; executable script elements remain filtered.
+    # Remove a legacy installation's broad script allow-list. The Agora
+    # loader is installed as a resource and the paste handler removes only
+    # its old bootstrap snippet; page content must not persist arbitrary
+    # executable scripts.
+    filters.valid_tags = [tag for tag in (filters.valid_tags or []) if tag != "script"]
+    filters.valid_tags = append_unique(filters.valid_tags, ["agora-component", "style", "button"])
+    # Plone's HTML filter has a separate denylist for tags considered unsafe.
+    # Remove only style from that list; scripts and the other unsafe tags stay
+    # blocked.
+    filters.nasty_tags = [tag for tag in (filters.nasty_tags or []) if tag != "style"]
     filters.custom_attributes = append_unique(
-        filters.custom_attributes, ["domain", "url", "auto-resize", "sync", "catalogue-model", "sync-parent", "display-domain"]
+        filters.custom_attributes, ["domain", "url", "auto-resize", "sync", "catalogue-model", "sync-parent", "display-domain", "media", "type", "data-agora-url", "data-agora-model"]
     )
     tiny = registry.forInterface(ITinyMCESchema, prefix="plone")
     tiny.custom_plugins = [p for p in (tiny.custom_plugins or [])
                            if p.split("|", 1)[0] != "agora"] + [
-        "agora|++resource++collective.agora/plugin.js?v=4"
+        "agora|++resource++collective.agora/plugin.js?v=9"
     ]
     tiny.custom_buttons = append_unique(tiny.custom_buttons, ["agora"])
     tiny.plugins = append_unique(tiny.plugins, ["template"])
@@ -55,7 +66,19 @@ def install(context):
     extended = options.get("extended_valid_elements", "")
     options["extended_valid_elements"] = ",".join(append_unique(
         [x for x in extended.split(",") if x],
-        ["agora-component[domain|url|auto-resize|sync|catalogue-model|sync-parent|display-domain|class|style]"]
+        ["agora-component[domain|url|auto-resize|sync|catalogue-model|sync-parent|display-domain|class|style]", "style[type|media]", "button[class|type|data-agora-url|data-agora-model]", "a[class|data-agora-url|data-agora-model]"]
+    ))
+    # TinyMCE settings persist across profile upgrades, so explicitly retain
+    # the security boundary even when an older profile had enabled scripts.
+    options["invalid_elements"] = ",".join(append_unique(
+        [x.strip() for x in options.get("invalid_elements", "").split(",") if x.strip()],
+        ["script"]
+    ))
+    # TinyMCE otherwise treats style as a head-only element and drops it when
+    # the editor body is parsed, even though the tag is in valid_elements.
+    options["valid_children"] = ",".join(append_unique(
+        [x.strip() for x in options.get("valid_children", "").split(",") if x.strip()],
+        ["+body[style]"]
     ))
     tiny.other_settings = json.dumps(options)
     tiny.content_css = append_unique(tiny.content_css, [

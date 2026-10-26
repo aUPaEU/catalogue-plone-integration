@@ -4,6 +4,8 @@
       metal:use-macro="context/main_template/macros/master">
   <metal:main fill-slot="main">
     <div class="agora-mirrored-detail">
+      <link rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
       <tal:inline replace="structure view/inline_styles" />
       <tal:stylesheet repeat="stylesheet view/stylesheets">
         <style type="text/css" tal:condition="stylesheet/css"
