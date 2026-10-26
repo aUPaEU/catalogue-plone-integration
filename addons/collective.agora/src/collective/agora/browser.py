@@ -15,6 +15,7 @@ from .detail_fragment import (
     absolutize_css_urls,
     extract_detail_fragment,
     extract_stylesheet_urls,
+    merge_synced_fragment,
 )
 
 _logger = logging.getLogger(__name__)
@@ -65,6 +66,18 @@ class AgoraSyncView(BrowserView):
             current = child
         return current
 
+    def _model_title(self, list_url, headers):
+        """Read Odoo's human-readable model description with the API token."""
+        try:
+            response = requests.get(list_url + '/schema', headers=headers, timeout=30)
+            response.raise_for_status()
+            title = (response.json() or {}).get('model_display_name')
+            if isinstance(title, str) and title.strip():
+                return title.strip()
+        except (requests.RequestException, ValueError, TypeError, AttributeError):
+            _logger.warning('Could not retrieve catalogue model description')
+        return None
+
     def __call__(self):
         if self.request.method != 'POST':
             return self._json({'error': 'POST required'}, 405)
@@ -93,7 +106,13 @@ class AgoraSyncView(BrowserView):
         parent_path = 'resources/' + model_name
         headers = {'Authorization': 'Bearer ' + token, 'Accept': 'application/json'}
         list_url = urljoin(base_url + '/', quote(model_name, safe='.'))
+        model_title = self._model_title(list_url, headers)
         try:
+            # Update existing folders as well, even when the catalogue is empty.
+            folder = self._target_folder(parent_path)
+            if model_title and folder.title != model_title:
+                folder.title = model_title
+                folder.reindexObject()
             page = 1
             synced = 0
             while True:
@@ -118,7 +137,6 @@ class AgoraSyncView(BrowserView):
                         headers={'Authorization': 'Bearer ' + token, 'Accept': 'text/html'}, timeout=30,
                     )
                     detail_response.raise_for_status()
-                    folder = self._target_folder(parent_path)
                     document_id = element_id
                     document = folder.get(document_id)
                     title = str((item.get('fields') or {}).get('name') or item.get('display_name') or document_id)
@@ -133,7 +151,11 @@ class AgoraSyncView(BrowserView):
                     fragment = html_parser.fragment_fromstring(detail_html, create_parent='div')
                     fragment.make_links_absolute(detail_url or api_detail_url)
                     detail_html = ''.join(html_parser.tostring(child, encoding='unicode') for child in fragment)
-                    document.text = RichTextValue(detail_html, 'text/html', 'text/html')
+                    previous_text = getattr(getattr(document, 'text', None), 'raw', '') or ''
+                    document.text = RichTextValue(
+                        merge_synced_fragment(previous_text, detail_html),
+                        'text/html', 'text/html',
+                    )
                     stylesheets = []
                     for stylesheet in extract_stylesheet_urls(detail_html):
                         stylesheet_url = urljoin(detail_url or api_detail_url, stylesheet)

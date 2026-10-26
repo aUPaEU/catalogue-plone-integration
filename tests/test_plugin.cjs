@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
-const source = fs.readFileSync(path.join(__dirname, '../addons/collective.agora/src/collective/agora/static/plugin.js'), 'utf8');
+const source = fs.readFileSync(process.argv[2] || path.join(__dirname, '../addons/collective.agora/src/collective/agora/static/plugin.js'), 'utf8');
 (async function () {
   let dialog, button, attrs, failure = false;
   const actions = [];
@@ -31,11 +31,12 @@ const source = fs.readFileSync(path.join(__dirname, '../addons/collective.agora/
     }
   });
   button.onAction();
-  assert.equal(dialog.initialData.browserDomain, true);
+
   const api = { getData: () => ({ domain: 'http://localhost:8010', path: '/research', model: 'alliance_catalogue_app.researchproposals', browserDomain: true }), block: () => {}, unblock: () => {}, close: () => {} };
   await dialog.onSubmit(api);
   assert.deepEqual(actions, ['fetch', 'insert']);
   assert.equal(attrs.sync, 'true');
+  assert.equal(attrs['display-domain'], 'browser');
   actions.length = 0;
   failure = true;
   await dialog.onSubmit(api);

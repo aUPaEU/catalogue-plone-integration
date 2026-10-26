@@ -31,7 +31,7 @@ def install(context):
     tiny = registry.forInterface(ITinyMCESchema, prefix="plone")
     tiny.custom_plugins = [p for p in (tiny.custom_plugins or [])
                            if p.split("|", 1)[0] != "agora"] + [
-        "agora|++resource++collective.agora/plugin.js?v=3"
+        "agora|++resource++collective.agora/plugin.js?v=4"
     ]
     tiny.custom_buttons = append_unique(tiny.custom_buttons, ["agora"])
     tiny.plugins = append_unique(tiny.plugins, ["template"])
@@ -65,8 +65,15 @@ def install(context):
     registry.registerInterface(IBundleRegistry, prefix=prefix)
     bundle = registry.forInterface(IBundleRegistry, prefix=prefix)
     bundle.enabled = True
-    bundle.jscompilation = "++resource++collective.agora/loader.js?v=4"
+    bundle.jscompilation = "++resource++collective.agora/loader.js"
     bundle.csscompilation = "++resource++collective.agora/site.css"
     bundle.load_defer = True
     bundle.depends = "plone"
     bundle.compile = False
+
+    # This older manual bundle bypasses the loader's attribute preparation.
+    legacy_js = registry.records.get("plone.bundles/agora.jscompilation")
+    legacy_enabled = registry.records.get("plone.bundles/agora.enabled")
+    if legacy_js is not None and legacy_enabled is not None:
+        if legacy_js.value == "https://cdn.jsdelivr.net/gh/KinoGlazPrusia/agora-component@v1.0.0/dist/agora-bundle.js":
+            legacy_enabled.value = False

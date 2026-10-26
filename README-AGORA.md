@@ -47,8 +47,11 @@ Relative image and CSS asset URLs resolve against Odoo. Older responses with
 stylesheet links remain supported. Created documents use the site's default
 workflow state; publish them using the normal Plone workflow when ready.
 
-**Use this Plone site for detail links** defaults to enabled for new components.
-It passes `detail_domain` and `detail_model` to the embedded Odoo catalogue.
+Synchronized components always open detail pages in the parent Plone window.
+The loader passes `detail_domain` and `detail_model` to the embedded catalogue.
+Odoo sends a detail-navigation message to Plone; Plone verifies the iframe and
+its origin, then navigates to its own `/resources/{model}/{id}` URL. Both the
+Plone loader and Odoo frontend assets must be updated together.
 The static Insert → Template shortcut is a placeholder; configure it using the
 **Àgora template** button to synchronize its catalogue.
 
@@ -93,10 +96,11 @@ Regression checks (the Python tests need the Plone environment):
 ```bash
 python -m unittest discover -s tests -p 'test_*.py'
 node tests/test_plugin.cjs
+node tests/test_loader.cjs
 ```
 
 After deploying the updated add-on, restart Plone; the startup installer applies
-profile version 1003 to refresh the editor and loader resources. Deploy the two
+profile version 1006 to refresh the editor and loader resources. Deploy the two
 updated JavaScript files in Odoo's `website_general_list_app` and rebuild its
 frontend assets. Odoo navigation can be checked with
 `node addons/website_general_list_app/tests/test_plone_navigation.cjs`.
@@ -325,3 +329,7 @@ Per reproduir el comportament antic, mantén el bundle carregat globalment però
 fes que la plantilla s’insereixi directament a `#content-core`. Si el bundle
 requereix que el component existeixi abans del registre, caldrà un petit loader
 personalitzat que creï el component abans de carregar el bundle.
+
+The loader resource path must not contain a query string: Plone uses the actual
+resource bytes for its integrity hash and automatic asset versioning. The installer
+disables the matching legacy manual Agora bundle so the loader owns initialization.

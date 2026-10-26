@@ -3,6 +3,7 @@ from Products.Five.browser.pagetemplatefile import ViewPageTemplateFile
 from zope.annotation import IAnnotations
 
 from .detail_fragment import (
+    extract_display_content,
     extract_detail_section,
     extract_inline_styles,
     extract_stylesheet_urls,
@@ -18,7 +19,7 @@ class AgoraDetailView(BrowserView):
     @property
     def html(self):
         text = getattr(self.context, 'text', None)
-        html = extract_detail_section(getattr(text, 'raw', text) or '')
+        html = extract_display_content(getattr(text, 'raw', text) or '')
         catalogue_path = IAnnotations(self.context).get(
             'collective.agora.catalogue_path',
         )

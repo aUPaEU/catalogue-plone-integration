@@ -33,14 +33,12 @@
         body: { type: "panel", items: [
           { type: "input", name: "domain", label: "Domain" },
           { type: "input", name: "path", label: "Path" },
-          { type: "input", name: "model", label: "Catalogue model (for synchronization)" },
-          { type: "checkbox", name: "browserDomain", label: "Use this Plone site for detail links" }
+          { type: "input", name: "model", label: "Catalogue model (for synchronization)" }
         ] },
         initialData: {
           domain: selected ? selected.getAttribute("domain") : "https://aupaeu.widening.eu/",
           path: selected ? selected.getAttribute("url") : "/event-catalogue-no-menu",
-          model: selected ? selected.getAttribute("catalogue-model") : "",
-          browserDomain: selected ? selected.getAttribute("display-domain") === "browser" : true
+          model: selected ? selected.getAttribute("catalogue-model") : ""
         },
         buttons: [
           { type: "cancel", text: "Cancel" },
@@ -75,7 +73,7 @@
             sync: "true",
             "catalogue-model": data.model.trim(),
             "sync-parent": "resources",
-            "display-domain": data.browserDomain ? "browser" : "odoo"
+            "display-domain": "browser"
           };
           api.block("Synchronizing catalogue…");
           try {

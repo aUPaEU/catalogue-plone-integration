@@ -13,6 +13,12 @@ _STYLESHEET = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 _INLINE_STYLE = re.compile(r'<style\b[^>]*>.*?</style\s*>', re.IGNORECASE | re.DOTALL)
+_SYNC_START = '<!-- agora-sync-start -->'
+_SYNC_END = '<!-- agora-sync-end -->'
+
+
+def _same_markup(left, right):
+    return re.sub(r'\s+', ' ', left or '').strip() == re.sub(r'\s+', ' ', right or '').strip()
 _HREF = re.compile(r'\bhref\s*=\s*["\']([^"\']+)["\']', re.IGNORECASE)
 _CSS_URL = re.compile(r'url\(\s*(["\']?)([^"\')]+)\1\s*\)', re.IGNORECASE)
 _BREADCRUMB = re.compile(
@@ -72,6 +78,42 @@ def extract_detail_section(value):
 def extract_inline_styles(value):
     """Keep API-provided style tags, including media attributes."""
     return ''.join(_INLINE_STYLE.findall(value or ''))
+
+
+def merge_synced_fragment(existing, imported):
+    """Replace only the synchronized region, preserving author content."""
+    existing = existing or ''
+    imported = imported or ''
+    start = existing.find(_SYNC_START)
+    end = existing.find(_SYNC_END, start + len(_SYNC_START)) if start >= 0 else -1
+    if start >= 0 and end >= 0:
+        prefix = existing[:start]
+        # The first marker migration kept the complete legacy imported body.
+        # If it is exactly the same as that managed body, remove the duplicate.
+        if _same_markup(prefix, existing[start + len(_SYNC_START):end]):
+            prefix = ''
+        return prefix + _SYNC_START + imported + _SYNC_END + existing[end + len(_SYNC_END):]
+    # Legacy documents have no ownership boundary. Keep their complete body
+    # intact and add a managed region for future updates.
+    if existing.strip():
+        return existing + _SYNC_START + imported + _SYNC_END
+    return _SYNC_START + imported + _SYNC_END
+
+
+def extract_display_content(value):
+    """Return editable document content, without sync markers or CSS tags."""
+    value = value or ''
+    if _SYNC_START in value and _SYNC_END in value:
+        start = value.find(_SYNC_START)
+        end = value.find(_SYNC_END, start + len(_SYNC_START))
+        prefix = value[:start]
+        managed = value[start + len(_SYNC_START):end]
+        suffix = value[end + len(_SYNC_END):]
+        if _same_markup(prefix, managed):
+            prefix = ''
+        value = prefix + managed + suffix
+        return _INLINE_STYLE.sub('', _STYLESHEET.sub('', value))
+    return extract_detail_section(value)
 
 
 def extract_stylesheet_urls(value):

@@ -6,7 +6,10 @@ from unittest.mock import Mock, patch
 
 from collective.agora.browser import AgoraSyncView
 from collective.agora.views import AgoraDetailView
-from collective.agora.detail_fragment import extract_detail_fragment, extract_inline_styles
+from collective.agora.detail_fragment import (
+    extract_detail_fragment, extract_inline_styles, extract_display_content,
+    merge_synced_fragment,
+)
 
 MODEL = 'alliance_catalogue_app.researchproposals'
 API = 'http://localhost:8010/catalogue-api/v2'
@@ -49,6 +52,11 @@ class SyncTest(unittest.TestCase):
         self.annotation_patch.start()
         self.addCleanup(self.annotation_patch.stop)
 
+    def schema_response(self, title='Research proposals'):
+        result = Mock()
+        result.json.return_value = {'model_display_name': title}
+        return result
+
     def response(self, items=None):
         result = Mock(text=HTML)
         result.json.return_value = {'items': items}
@@ -57,7 +65,8 @@ class SyncTest(unittest.TestCase):
     def test_import_css_paths_and_repeat_without_detail_url(self):
         item = {'id': 3, 'fields': {'name': 'Research proposal'}}
         with patch('collective.agora.browser.requests.get', side_effect=[
-            self.response([item]), self.response(), self.response([item]), self.response(),
+            self.schema_response(), self.response([item]), self.response(),
+            self.schema_response(), self.response([item]), self.response(),
         ]) as get:
             self.assertEqual(json.loads(self.view())['synced'], 1)
             doc = self.site['resources'][MODEL]['3']
@@ -70,8 +79,8 @@ class SyncTest(unittest.TestCase):
         self.assertIn('http://localhost:8010/web/image/1', doc.text.raw)
         self.assertNotIn('Odoo navigation', doc.text.raw)
         self.assertNotIn('Odoo footer', doc.text.raw)
-        self.assertEqual(get.call_args_list[1].args[0], API + '/' + MODEL + '/3?response=html')
-        self.assertEqual(get.call_count, 4, 'Embedded CSS must not require extra requests')
+        self.assertEqual(get.call_args_list[2].args[0], API + '/' + MODEL + '/3?response=html')
+        self.assertEqual(get.call_count, 6, 'Embedded CSS must not require extra requests')
         detail = AgoraDetailView(doc, self.request)
         self.assertIn('media="screen"', detail.inline_styles)
         with patch('collective.agora.views.IAnnotations', lambda doc: doc.annotations):
@@ -81,21 +90,47 @@ class SyncTest(unittest.TestCase):
 
     def test_old_odoo_path_does_not_determine_location(self):
         item = {'id': 3, 'fields': {'detail_view_url': 'https://odoo.example/offering/42/3'}}
-        with patch('collective.agora.browser.requests.get', side_effect=[self.response([item]), self.response()]):
+        with patch('collective.agora.browser.requests.get', side_effect=[self.schema_response(), self.response([item]), self.response()]):
             self.assertTrue(json.loads(self.view())['success'])
         self.assertEqual(list(self.site['resources'][MODEL]), ['3'])
         self.assertNotIn('offering', self.site)
 
+    def test_description_updates_existing_folder_without_changing_url(self):
+        model = 'alliance_catalogue_app.course'
+        self.request.get.side_effect = lambda *args: json.dumps({'model_name': model})
+        folder = self.view._target_folder('resources/' + model)
+        folder.reindexObject = Mock()
+        with patch('collective.agora.browser.requests.get', side_effect=[
+            self.schema_response('Courses'), self.response([]),
+        ]) as get:
+            self.assertTrue(json.loads(self.view())['success'])
+        self.assertIs(self.site['resources'][model], folder)
+        self.assertEqual(folder.title, 'Courses')
+        folder.reindexObject.assert_called_once()
+        self.assertEqual(get.call_args_list[0].args[0], API + '/' + model + '/schema')
+        self.assertEqual(get.call_args_list[0].kwargs['headers']['Authorization'], 'Bearer test-only')
+
+    def test_missing_description_preserves_existing_title(self):
+        folder = self.view._target_folder('resources/' + MODEL)
+        folder.title = 'Custom catalogue title'
+        with patch('collective.agora.browser.requests.get', side_effect=[
+            self.schema_response(None), self.response([]),
+        ]):
+            self.assertTrue(json.loads(self.view())['success'])
+        self.assertEqual(folder.title, 'Custom catalogue title')
+
     def test_pagination(self):
         first = [{'id': i, 'fields': {}} for i in range(1, 501)]
         def fetch(url, **kwargs):
+            if url.endswith('/schema'):
+                return self.schema_response()
             if url == API + '/' + MODEL:
                 return self.response(first if kwargs['params']['page'] == 1 else [{'id': 501}])
             return self.response()
         with patch('collective.agora.browser.requests.get', side_effect=fetch) as get:
             self.assertEqual(json.loads(self.view())['synced'], 501)
         self.assertEqual(len(self.site['resources'][MODEL]), 501)
-        self.assertEqual(get.call_count, 503)
+        self.assertEqual(get.call_count, 504)
 
     def test_invalid_model_and_missing_ids(self):
         self.request.get.side_effect = lambda *args: json.dumps({'model_name': '..'})
@@ -108,6 +143,50 @@ class SyncTest(unittest.TestCase):
         fragment = extract_detail_fragment(value)
         self.assertEqual(fragment.count('<style'), 2)
         self.assertEqual(extract_inline_styles(fragment).count('<style'), 2)
+
+    def test_author_content_survives_resynchronization(self):
+        item = {'id': 3, 'fields': {'name': 'Research proposal'}}
+        with patch('collective.agora.browser.requests.get', side_effect=[
+            self.schema_response(), self.response([item]), self.response(),
+        ]):
+            self.assertEqual(json.loads(self.view())['synced'], 1)
+        document = self.site['resources'][MODEL]['3']
+        document.text = SimpleNamespace(
+            raw='<p>Author heading</p>' + document.text.raw + '<p>Author footer</p>'
+        )
+        with patch('collective.agora.browser.requests.get', side_effect=[
+            self.schema_response(), self.response([item]), self.response(),
+        ]):
+            self.assertEqual(json.loads(self.view())['synced'], 1)
+        self.assertIn('Author heading', document.text.raw)
+        self.assertIn('Author footer', document.text.raw)
+        self.assertEqual(document.text.raw.count('Proposal'), 1)
+        with patch('collective.agora.views.IAnnotations', lambda doc: doc.annotations):
+            detail = AgoraDetailView(document, self.request)
+            self.assertIn('Author heading', detail.html)
+            self.assertIn('Author footer', detail.html)
+
+    def test_legacy_body_is_preserved_when_markers_are_added(self):
+        item = {'id': 3, 'fields': {'name': 'Research proposal'}}
+        with patch('collective.agora.browser.requests.get', side_effect=[
+            self.schema_response(), self.response([item]), self.response(),
+        ]):
+            self.assertEqual(json.loads(self.view())['synced'], 1)
+        document = self.site['resources'][MODEL]['3']
+        legacy = document.text.raw
+        document.text = SimpleNamespace(raw=legacy + '<p>Added later</p>')
+        with patch('collective.agora.browser.requests.get', side_effect=[
+            self.schema_response(), self.response([item]), self.response(),
+        ]):
+            self.assertEqual(json.loads(self.view())['synced'], 1)
+        self.assertIn('Added later', document.text.raw)
+        self.assertIn('agora-sync-start', document.text.raw)
+
+    def test_exact_legacy_duplicate_is_collapsed(self):
+        imported = '<section class="detail-view-container"><p>Course</p></section>'
+        duplicate = imported + '<!-- agora-sync-start -->' + imported + '<!-- agora-sync-end -->'
+        merged = merge_synced_fragment(duplicate, imported)
+        self.assertEqual(merged.count('detail-view-container'), 1)
 
 
 if __name__ == '__main__':

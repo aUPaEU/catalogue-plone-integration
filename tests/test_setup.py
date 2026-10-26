@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 from collective.agora.setuphandlers import install
 from plone.base.interfaces.controlpanel import IFilterSchema, ITinyMCESchema
+from plone.base.interfaces.resources import IBundleRegistry
 from plone.registry import Registry
 from plone.registry.fieldfactory import persistentFieldAdapter, choicePersistentFieldAdapter
 from zope.component import provideAdapter
@@ -16,6 +17,10 @@ class InstallationTest(unittest.TestCase):
         registry = Registry()
         registry.registerInterface(IFilterSchema, prefix='plone')
         registry.registerInterface(ITinyMCESchema, prefix='plone')
+        registry.registerInterface(IBundleRegistry, prefix='plone.bundles/agora')
+        legacy = registry.forInterface(IBundleRegistry, prefix='plone.bundles/agora')
+        legacy.enabled = True
+        legacy.jscompilation = 'https://cdn.jsdelivr.net/gh/KinoGlazPrusia/agora-component@v1.0.0/dist/agora-bundle.js'
         tiny = registry.forInterface(ITinyMCESchema, prefix='plone')
         tiny.other_settings = json.dumps({'custom_elements': 'existing-card', 'branding': False})
         tiny.templates = json.dumps([{'title': 'Existing', 'content': '<p>Keep</p>'}])
@@ -26,6 +31,9 @@ class InstallationTest(unittest.TestCase):
             first = {key: record.value for key, record in registry.records.items()}
             install(None)
         self.assertEqual(first, {key: record.value for key, record in registry.records.items()})
+        self.assertFalse(legacy.enabled)
+        loader = registry.records['plone.bundles/collective-agora.jscompilation'].value
+        self.assertEqual(loader, '++resource++collective.agora/loader.js')
         self.assertIn('existing|++resource++existing.js', tiny.custom_plugins)
         self.assertEqual(json.loads(tiny.templates)[0]['title'], 'Existing')
         options = json.loads(tiny.other_settings)

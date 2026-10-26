@@ -11,7 +11,7 @@ newSecurityManager(None, admin.__of__(app.acl_users))
 site = app[os.environ.get("SITE", "Plone")]
 setSite(site)
 profile = "collective.agora:default"
-if site.portal_setup.getLastVersionForProfile(profile) != ("1003",):
+if site.portal_setup.getLastVersionForProfile(profile) != ("1006",):
     site.portal_setup.runAllImportStepsFromProfile("profile-" + profile)
     transaction.commit()
     print("Installed Agora TinyMCE templates on", site.id)
