@@ -189,7 +189,7 @@
         }
       } catch (_) {
         const message = document.createElement("p");
-        message.textContent = "Invalid Agora domain or path. Edit the Àgora template to correct it.";
+        message.textContent = "Invalid Agora domain or path. Edit the Agora template to correct it.";
         element.replaceWith(message);
       }
     });

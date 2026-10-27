@@ -73,7 +73,7 @@
     function openDialog() {
       const selected = editor.dom.getParent(editor.selection.getNode(), "agora-component");
       editor.windowManager.open({
-        title: "Àgora template",
+        title: "Agora template",
         body: { type: "panel", items: [
           { type: "input", name: "domain", label: "Domain" },
           { type: "input", name: "path", label: "Path" },
@@ -157,11 +157,11 @@
         }
       });
     }
-    editor.ui.registry.addButton("agora", { text: "Àgora template", onAction: openDialog });
-    editor.ui.registry.addMenuItem("agora", { text: "Àgora template", onAction: openDialog });
+    editor.ui.registry.addButton("agora", { text: "Agora template", onAction: openDialog });
+    editor.ui.registry.addMenuItem("agora", { text: "Agora template", onAction: openDialog });
     editor.on("DblClick", function (event) {
       if (editor.dom.getParent(event.target, "agora-component")) openDialog();
     });
-    return { getMetadata: function () { return { name: "Àgora template" }; } };
+    return { getMetadata: function () { return { name: "Agora template" }; } };
   });
 }());

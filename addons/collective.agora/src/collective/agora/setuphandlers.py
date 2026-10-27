@@ -8,8 +8,8 @@ from zope.component import getUtility
 from .interfaces import IAgoraSyncSettings, ensure_settings_registry
 
 TEMPLATE = {
-    "title": "Àgora component",
-    "description": "Insert Agora, then use the Àgora template button to edit domain and path.",
+    "title": "Agora component",
+    "description": "Insert Agora, then use the Agora template button to edit domain and path.",
     "content": '<agora-component domain="https://aupaeu.widening.eu/" '
                'url="/event-catalogue-no-menu" auto-resize="true" sync="false" '
                'display-domain="odoo"></agora-component>',

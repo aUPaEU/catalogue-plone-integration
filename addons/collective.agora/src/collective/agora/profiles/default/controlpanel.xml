@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <object name="portal_controlpanel">
-  <configlet title="Àgora catalogue synchronization" action_id="agora-sync-settings"
+  <configlet title="Agora catalogue synchronization" action_id="agora-sync-settings"
       appId="collective.agora" category="Products" condition_expr=""
       url_expr="string:${portal_url}/@@agora-sync-settings"
       visible="True">

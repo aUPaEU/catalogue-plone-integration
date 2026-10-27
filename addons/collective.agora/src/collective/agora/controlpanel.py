@@ -8,7 +8,7 @@ from zope.component import getUtility
 
 class AgoraSyncControlPanel(RegistryEditForm):
     schema = IAgoraSyncSettings
-    label = 'Àgora catalogue synchronization'
+    label = 'Agora catalogue synchronization'
 
     def __init__(self, context, request):
         ensure_settings_registry(getUtility(IRegistry))

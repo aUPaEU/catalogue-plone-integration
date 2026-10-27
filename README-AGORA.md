@@ -1,4 +1,4 @@
-# Àgora add-on: automatic setup
+# Agora add-on: automatic setup
 
 The implementation lives in `addons/collective.agora` and is installed in editable
 mode from the shared Docker bind mount. Run `docker compose up -d`; installation
@@ -7,13 +7,13 @@ also applies to the existing `Plone1` site, without replacing its contents.
 ## Use
 
 1. Edit a page and select the `text/html` editor.
-2. Click **Àgora template** in the toolbar.
+2. Click **Agora template** in the toolbar.
 3. Fill **Domain** (HTTP/HTTPS origin), **Path** (starting with `/`), and **Catalogue model** (e.g. `alliance_catalogue_app.researchproposals`).
 4. Insert and save. Auto-resize is enabled automatically.
 
 The same button updates the selected component. TinyMCE displays a labelled
 placeholder; the saved page runs the real web component. The regular
-**Insert → Template** menu also contains **Àgora component** with the defaults.
+**Insert → Template** menu also contains **Agora component** with the defaults.
 
 ## What installation configures
 
@@ -24,7 +24,7 @@ placeholder; the saved page runs the real web component. The regular
 
 ## Catalogue synchronization
 
-In **Site Setup → Àgora catalogue synchronization**, configure the Odoo v2
+In **Site Setup → Agora catalogue synchronization**, configure the Odoo v2
 catalogue API base URL and its JWT bearer token. The token is stored in Plone's
 registry and is used only by the authenticated server-side `@@agora-sync` view;
 it is never written into page HTML or sent by the browser.
@@ -47,7 +47,7 @@ selected minute, hourly, or daily interval. Daily runs use the configured
 When the field is empty in the local Compose setup, `host.docker.internal` is
 automatically converted to `localhost`.
 
-Inserting or updating through **Àgora template** automatically synchronizes the
+Inserting or updating through **Agora template** automatically synchronizes the
 catalogue before inserting the component. Plone fetches every page of the JSON
 catalogue and each item's `/catalogue-api/v2/{model}/{id}?response=html` response.
 Documents are created or updated at `/resources/{model}/{id}` relative to the
@@ -66,7 +66,7 @@ Odoo sends a detail-navigation message to Plone; Plone verifies the iframe and
 its origin, then navigates to its own `/resources/{model}/{id}` URL. Both the
 Plone loader and Odoo frontend assets must be updated together.
 The static Insert → Template shortcut is a placeholder; configure it using the
-**Àgora template** button to synchronize its catalogue.
+**Agora template** button to synchronize its catalogue.
 
 The loader loads the requested v1.0.0 bundle once, after component attributes
 exist. It normalizes the origin and path before registration to avoid doubled
@@ -134,7 +134,7 @@ made after installation.
 The following notes describe the previous manual setup. The add-on above now
 performs the editor, filtering and resource configuration automatically.
 
-# Integrar el webcomponent Àgora a Plone 6
+# Integrar el webcomponent Agora a Plone 6
 
 ## 1. Carregar el bundle des de la interfície
 
@@ -174,8 +174,8 @@ La plantilla no ha de contenir cap `<script>`. Ha de contenir el custom element:
 ```json
 [
   {
-    "title": "Àgora component",
-    "description": "Insereix un webcomponent Àgora",
+    "title": "Agora component",
+    "description": "Insereix un webcomponent Agora",
     "content": "<div class=\"agora-component-wrapper\"><agora-component domain=\"https://aupaeu.widening.eu/\" url=\"/event-catalogue-no-menu\" auto-resize=\"true\"></agora-component></div>"
   }
 ]
@@ -290,7 +290,7 @@ El resultat de la primera línia ha de ser `true` i l’element ha d’existir.
 `auto-resize` només pot funcionar si la pàgina carregada dins del component
 envia la seva alçada al webcomponent mitjançant `postMessage`. Com que
 `https://aupaeu.widening.eu` és un domini diferent del domini de Plone, Plone
-no pot calcular directament l’alçada del seu contingut. Si la pàgina Àgora no
+no pot calcular directament l’alçada del seu contingut. Si la pàgina Agora no
 envia aquest missatge, el component es queda amb una alçada fixa i mostra una
 barra de desplaçament interna.
 
@@ -312,7 +312,7 @@ Per confirmar-ho, prova temporalment una alçada fixa a la plantilla:
 
 Si amb aquesta alçada el contingut es veu complet, el bundle funciona i el
 problema és la comunicació de l’auto-resize amb la pàgina remota. En aquest
-cas, cal que l’aplicació Àgora implementi el `postMessage` de resize o utilitzar
+cas, cal que l’aplicació Agora implementi el `postMessage` de resize o utilitzar
 una alçada fixa/min-height com a alternativa.
 
 ## 6. Diferència respecte de la integració antiga

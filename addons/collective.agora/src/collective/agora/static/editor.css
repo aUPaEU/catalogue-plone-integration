@@ -6,7 +6,7 @@ agora-component {
   background: #f0f7fa;
 }
 agora-component::before {
-  content: "Àgora: " attr(domain) attr(url) " — select and use Àgora template to edit";
+  content: "Agora: " attr(domain) attr(url) " — select and use Agora template to edit";
   font: 14px sans-serif;
 }
 

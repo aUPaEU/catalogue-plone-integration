@@ -21,7 +21,7 @@ assert 'agora' in registry('custom_buttons')
 scripts_filtered = (not registry('disable_filtering')
                     and 'script' not in registry('valid_tags'))
 templates = json.loads(registry('templates'))
-assert sum(t['title'] == 'Àgora component' for t in templates) == 1
+assert sum(t['title'] == 'Agora component' for t in templates) == 1
 for asset in ('plugin.js', 'loader.js', 'site.css', 'editor.css'):
     session.get(base + '/++resource++collective.agora/' + asset).raise_for_status()
 
@@ -60,7 +60,7 @@ try:
     assert 'agora' in config['toolbar'].split()
     assert 'agora-component' in config['custom_elements']
     assert 'template' in config['plugins']
-    assert any(t['title'] == 'Àgora component' for t in config['templates'])
+    assert any(t['title'] == 'Agora component' for t in config['templates'])
     print('PASS: registry, resources, document save/render, HTML filtering and editor configuration')
 finally:
     if created_url:

@@ -1,4 +1,4 @@
-# Local Plone 6 with Àgora templates
+# Local Plone 6 with Agora templates
 
 ```bash
 docker compose up -d
@@ -8,11 +8,11 @@ Open http://localhost:8080/Plone1 (local credentials: `admin` / `admin`).
 The `collective.agora` add-on installs automatically on the existing or newly
 created `Plone1` site. The database is kept in the `plone-data` named volume.
 
-Edit a page, choose **text/html**, and click **Àgora template** in TinyMCE.
+Edit a page, choose **text/html**, and click **Agora template** in TinyMCE.
 Enter **Domain** and **Path**, then click **Insert**. Defaults are
 `https://aupaeu.widening.eu/` and `/event-catalogue-no-menu`.
 Select an existing component and use the same button to update its values.
-**Insert → Template → Àgora component** also inserts the default template.
+**Insert → Template → Agora component** also inserts the default template.
 
 The add-on source is shared through `./addons:/app/addons`. Python changes
 require `docker compose restart plone`; refresh the browser after JS/CSS edits.
