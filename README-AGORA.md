@@ -39,14 +39,6 @@ reach, for example `https://agora.unite-university.eu` in production. This is
 separate from the API URL: Plone uses the API URL internally, while links,
 images, and share URLs written into synchronized pages use the browser URL.
 
-The same panel contains the automatic synchronization worker settings. When
-enabled, the worker scans Plone pages for Agora components with a
-`catalogue-model` attribute and synchronizes each discovered model at the
-selected minute, hourly, or daily interval. Daily runs use the configured
-24-hour time. The worker is disabled by default.
-When the field is empty in the local Compose setup, `host.docker.internal` is
-automatically converted to `localhost`.
-
 Inserting or updating through **Agora template** automatically synchronizes the
 catalogue before inserting the component. Plone fetches every page of the JSON
 catalogue and each item's `/catalogue-api/v2/{model}/{id}?response=html` response.
@@ -54,6 +46,12 @@ Documents are created or updated at `/resources/{model}/{id}` relative to the
 Plone site, for example `/Plone1/resources/alliance_catalogue_app.researchproposals/3`.
 Legacy parent-path settings and Odoo `/offering/` paths no longer determine the destination.
 Existing pages at old paths are left in place; update the component to create the new pages.
+
+For an on-demand full refresh, send a POST request to `@@agora-sync-all` on the
+site root. The endpoint scans the website for every `catalogue-model` used by
+an Agora component and synchronizes each unique model. It requires the
+`Manage portal` permission and returns one result per model. It does not run in
+the background and there is no scheduler configuration in the addon.
 
 Embedded CSS from the HTML response is preserved, including media attributes.
 Relative image and CSS asset URLs resolve against Odoo. Older responses with

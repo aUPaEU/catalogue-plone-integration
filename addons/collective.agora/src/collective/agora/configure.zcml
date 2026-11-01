@@ -1,13 +1,10 @@
 <configure xmlns="http://namespaces.zope.org/zope"
            xmlns:browser="http://namespaces.zope.org/browser"
            xmlns:genericsetup="http://namespaces.zope.org/genericsetup">
-  <utility component=".vocabularies.frequencies"
-      provides="zope.schema.interfaces.IVocabularyFactory"
-      name="collective.agora.frequencies" />
-  <subscriber for="zope.processlifetime.IProcessStarting"
-      handler=".scheduler.start_scheduler" />
   <browser:page name="agora-sync" for="Products.CMFCore.interfaces.ISiteRoot"
       class=".browser.AgoraSyncView" permission="cmf.ModifyPortalContent" />
+  <browser:page name="agora-sync-all" for="Products.CMFCore.interfaces.ISiteRoot"
+      class=".browser.AgoraSyncAllView" permission="cmf.ManagePortal" />
   <browser:page name="agora-sync-settings" for="Products.CMFCore.interfaces.ISiteRoot"
       class=".controlpanel.AgoraSyncControlPanelView" permission="cmf.ManagePortal" />
   <browser:page name="agora-detail"

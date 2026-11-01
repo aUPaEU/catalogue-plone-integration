@@ -17,7 +17,8 @@ Select an existing component and use the same button to update its values.
 The add-on source is shared through `./addons:/app/addons`. Python changes
 require `docker compose restart plone`; refresh the browser after JS/CSS edits.
 The install profile preserves existing settings and does not run again on every
-restart. See [README-AGORA.md](README-AGORA.md) for configuration and verification.
+restart. See [README-AGORA.md](README-AGORA.md) for configuration, full
+synchronization, and verification.
 
 ```bash
 docker compose logs -f plone

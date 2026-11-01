@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from urllib.parse import quote, urljoin, urlsplit, urlunsplit
 
 import requests
@@ -21,6 +22,36 @@ from .detail_fragment import (
 )
 
 _logger = logging.getLogger(__name__)
+_MODEL = re.compile(r'\bcatalogue-model\s*=\s*["\']([^"\']+)', re.IGNORECASE)
+
+
+def _catalogue_models(site):
+    """Return the unique catalogue models used by components on the site."""
+    found = set()
+
+    def walk(folder):
+        for child in folder.objectValues():
+            text = getattr(child, 'text', None)
+            raw = getattr(text, 'raw', '') if text else ''
+            found.update(_MODEL.findall(raw or ''))
+            if hasattr(child, 'objectValues'):
+                walk(child)
+
+    walk(site)
+    return sorted(found)
+
+
+class _BulkSyncRequest:
+    """Request facade used to reuse the single-model synchronizer."""
+
+    method = 'POST'
+
+    def __init__(self, request, model_name):
+        self.response = request.response
+        self._body = json.dumps({'model_name': model_name})
+
+    def get(self, name, default=None):
+        return self._body if name == 'BODY' else default
 
 
 def _safe_segment(value):
@@ -245,3 +276,42 @@ class AgoraSyncView(BrowserView):
             return self._json({'error': 'Odoo catalogue request failed', 'detail': str(exc)}, 502)
         except (KeyError, TypeError, ValueError) as exc:
             return self._json({'error': str(exc)}, 400)
+
+
+class AgoraSyncAllView(BrowserView):
+    """Synchronize every catalogue model referenced by this Plone site."""
+
+    def _json(self, payload, status=200):
+        self.request.response.setStatus(status)
+        self.request.response.setHeader('Content-Type', 'application/json; charset=utf-8')
+        return json.dumps(payload, ensure_ascii=False)
+
+    def __call__(self):
+        if self.request.method != 'POST':
+            return self._json({'error': 'POST required'}, 405)
+
+        models = _catalogue_models(self.context)
+        results = []
+        total_synced = 0
+        failed = False
+        for model_name in models:
+            result = AgoraSyncView(
+                self.context, _BulkSyncRequest(self.request, model_name),
+            )()
+            try:
+                payload = json.loads(result)
+            except (TypeError, ValueError):
+                payload = {'error': 'Invalid synchronization response'}
+            payload['model_name'] = model_name
+            if payload.get('success'):
+                total_synced += payload.get('synced', 0)
+            else:
+                failed = True
+            results.append(payload)
+
+        return self._json({
+            'success': not failed,
+            'models': results,
+            'catalogues': len(models),
+            'synced': total_synced,
+        }, 502 if failed else 200)
