@@ -7,11 +7,7 @@ from plone.app.layout.globals.interfaces import IViewView
 
 from .detail_fragment import (
     extract_display_content,
-    extract_detail_section,
-    extract_inline_styles,
-    extract_stylesheet_urls,
     remove_share_controls,
-    repair_browser_urls,
     rewrite_breadcrumb_link,
 )
 from .interfaces import IAgoraSyncedDocument
@@ -25,9 +21,7 @@ class AgoraDetailView(BrowserView):
     @property
     def html(self):
         text = getattr(self.context, 'text', None)
-        html = remove_share_controls(repair_browser_urls(
-            extract_display_content(getattr(text, 'raw', text) or '')
-        ))
+        html = remove_share_controls(extract_display_content(getattr(text, 'raw', text) or ''))
         catalogue_path = IAnnotations(self.context).get(
             'collective.agora.catalogue_path',
         )
@@ -38,20 +32,12 @@ class AgoraDetailView(BrowserView):
 
     @property
     def inline_styles(self):
-        text = getattr(self.context, 'text', None)
-        stored = IAnnotations(self.context).get('collective.agora.inline_styles', '')
-        return repair_browser_urls(stored or extract_inline_styles(getattr(text, 'raw', text) or ''))
+        return IAnnotations(self.context).get('collective.agora.inline_styles', '')
 
     @property
     def stylesheets(self):
-        text = getattr(self.context, 'text', None)
-        urls = extract_stylesheet_urls(getattr(text, 'raw', text) or '')
         stored = IAnnotations(self.context).get('collective.agora.stylesheets', ())
-        # New synchronized documents store CSS text, while older documents
-        # may still contain only stylesheet URLs.
-        if stored:
-            return [{'css': repair_browser_urls(css), 'url': ''} for css in stored]
-        return [{'css': '', 'url': repair_browser_urls(url)} for url in urls]
+        return [{'css': css, 'url': ''} for css in stored]
 
     def __call__(self):
         # The navigation portlet uses this marker to expand the catalogue

@@ -1,9 +1,16 @@
+"""Adapt Plone's navigation portlet for synchronized Agora documents.
+
+Plone's navigation portlet does not expose extension points for the two
+internal methods used here. The wrappers below are therefore deliberately
+small and preserve the original methods, including when a development reload
+imports this module more than once.
+"""
+
 from zope.component import adapter
 from zope.interface import Interface, implementer
 from zope.annotation import IAnnotations
 
 from plone.app.portlets.portlets.navigation import (
-    INavigationPortlet,
     NavtreeStrategy,
     QueryBuilder,
     Renderer,
@@ -14,7 +21,16 @@ from plone.app.layout.navigation.interfaces import INavtreeStrategy
 from .interfaces import IAgoraSyncedDocument
 
 
-_query_builder_call = QueryBuilder.__call__
+_PATCH_MARKER = '_collective_agora_original'
+
+
+def _original_method(owner, name):
+    """Return the unwrapped Plone method, including after module reloads."""
+    method = getattr(owner, name)
+    return getattr(method, _PATCH_MARKER, method)
+
+
+_query_builder_call = _original_method(QueryBuilder, '__call__')
 
 
 def _agora_query(self):
@@ -34,9 +50,10 @@ def _agora_query(self):
     return query
 
 
+_agora_query.__dict__[_PATCH_MARKER] = _query_builder_call
 QueryBuilder.__call__ = _agora_query
 
-_strategy_show_children = NavtreeStrategy.showChildrenOf
+_strategy_show_children = _original_method(NavtreeStrategy, 'showChildrenOf')
 
 
 def _agora_show_children(self, obj):
@@ -45,9 +62,10 @@ def _agora_show_children(self, obj):
     return _strategy_show_children(self, obj)
 
 
+_agora_show_children.__dict__[_PATCH_MARKER] = _strategy_show_children
 NavtreeStrategy.showChildrenOf = _agora_show_children
 
-_renderer_get_nav_tree = Renderer.getNavTree
+_renderer_get_nav_tree = _original_method(Renderer, 'getNavTree')
 
 
 def _agora_get_nav_tree(self, _marker=None):
@@ -82,6 +100,7 @@ def _agora_get_nav_tree(self, _marker=None):
     return {'children': children}
 
 
+_agora_get_nav_tree.__dict__[_PATCH_MARKER] = _renderer_get_nav_tree
 Renderer.getNavTree = _agora_get_nav_tree
 
 

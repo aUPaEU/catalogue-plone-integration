@@ -181,7 +181,7 @@ class AgoraSyncView(BrowserView):
             catalogue_path = _safe_site_path(payload.get('source_path'))
         except ValueError as exc:
             return self._json({'error': str(exc)}, 400)
-        # Canonical location is independent of Odoo website page IDs and legacy settings.
+        # The Plone location is independent of Odoo website page IDs.
         parent_path = 'resources/' + model_name
         headers = {'Authorization': 'Bearer ' + token, 'Accept': 'application/json'}
         list_url = urljoin(base_url + '/', quote(model_name, safe='.'))

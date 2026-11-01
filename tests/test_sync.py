@@ -44,7 +44,6 @@ class SyncTest(unittest.TestCase):
         self.request = Mock(method='POST')
         self.request.get.side_effect = lambda key, default=None: json.dumps({
             'model_name': MODEL, 'source_path': '/catalogue',
-            'parent_path': 'old-place', 'preserve_odoo_path': True,
         }) if key == 'BODY' else default
         self.view = AgoraSyncView(self.site, self.request)
         self.view._settings = lambda: SimpleNamespace(api_base_url=API, api_token='test-only')
@@ -169,27 +168,21 @@ class SyncTest(unittest.TestCase):
             self.assertIn('Author heading', detail.html)
             self.assertIn('Author footer', detail.html)
 
-    def test_legacy_body_is_preserved_when_markers_are_added(self):
+    def test_existing_body_is_preserved_when_markers_are_added(self):
         item = {'id': 3, 'fields': {'name': 'Research proposal'}}
         with patch('collective.agora.browser.requests.get', side_effect=[
             self.schema_response(), self.response([item]), self.response(),
         ]):
             self.assertEqual(json.loads(self.view())['synced'], 1)
         document = self.site['resources'][MODEL]['3']
-        legacy = document.text.raw
-        document.text = SimpleNamespace(raw=legacy + '<p>Added later</p>')
+        existing = document.text.raw
+        document.text = SimpleNamespace(raw=existing + '<p>Added later</p>')
         with patch('collective.agora.browser.requests.get', side_effect=[
             self.schema_response(), self.response([item]), self.response(),
         ]):
             self.assertEqual(json.loads(self.view())['synced'], 1)
         self.assertIn('Added later', document.text.raw)
         self.assertIn('agora-sync-start', document.text.raw)
-
-    def test_exact_legacy_duplicate_is_collapsed(self):
-        imported = '<section class="detail-view-container"><p>Course</p></section>'
-        duplicate = imported + '<!-- agora-sync-start -->' + imported + '<!-- agora-sync-end -->'
-        merged = merge_synced_fragment(duplicate, imported)
-        self.assertEqual(merged.count('detail-view-container'), 1)
 
     def test_odoo_back_to_top_control_is_removed(self):
         value = ('<div id="top" style="display:none">Empty Top</div>'

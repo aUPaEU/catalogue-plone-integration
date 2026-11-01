@@ -48,22 +48,6 @@ _SHARE_CONTROL = re.compile(
     r'<(?:a|button)\b[^>]*\bclass\s*=\s*["\'][^"\']*\bdetail-view-share-button\b[^"\']*["\'][^>]*>.*?</(?:a|button)>',
     re.IGNORECASE | re.DOTALL,
 )
-_DUPLICATE_PORT = re.compile(
-    r'(?P<scheme>https?)://(?P<host>[^/\s:]+):(?P<port>\d+):(?P=port)(?P<rest>[^\s"\'<>]*)',
-    re.IGNORECASE,
-)
-
-
-def repair_browser_urls(value):
-    """Repair malformed URLs saved by older synchronization versions."""
-    if not value:
-        return value or ''
-    value = _DUPLICATE_PORT.sub(
-        r'\g<scheme>://\g<host>:\g<port>\g<rest>', value,
-    )
-    return value.replace('http://host.docker.internal:8010', 'http://localhost:8010')
-
-
 def remove_back_to_top_controls(value):
     """Remove Odoo's icon-only back-to-top controls from the detail fragment."""
     return _HIDDEN_TOP.sub('', _BACK_TO_TOP.sub('', value or ''))
@@ -79,8 +63,8 @@ def extract_detail_fragment(value):
     """Return stylesheet links plus the Odoo detail component.
 
     The API normally already returns this shape, but extracting again in Plone
-    makes synchronization safe when an older API response or an already stored
-    full Odoo page is encountered.
+    keeps only the reusable detail component when the response includes the
+    surrounding Odoo document.
     """
     if not value:
         return ''
@@ -133,13 +117,7 @@ def merge_synced_fragment(existing, imported):
     end = existing.find(_SYNC_END, start + len(_SYNC_START)) if start >= 0 else -1
     if start >= 0 and end >= 0:
         prefix = existing[:start]
-        # The first marker migration kept the complete legacy imported body.
-        # If it is exactly the same as that managed body, remove the duplicate.
-        if _same_markup(prefix, existing[start + len(_SYNC_START):end]):
-            prefix = ''
         return prefix + _SYNC_START + imported + _SYNC_END + existing[end + len(_SYNC_END):]
-    # Legacy documents have no ownership boundary. Keep their complete body
-    # intact and add a managed region for future updates.
     if existing.strip():
         return existing + _SYNC_START + imported + _SYNC_END
     return _SYNC_START + imported + _SYNC_END

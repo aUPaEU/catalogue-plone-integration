@@ -44,8 +44,8 @@ catalogue before inserting the component. Plone fetches every page of the JSON
 catalogue and each item's `/catalogue-api/v2/{model}/{id}?response=html` response.
 Documents are created or updated at `/resources/{model}/{id}` relative to the
 Plone site, for example `/Plone1/resources/alliance_catalogue_app.researchproposals/3`.
-Legacy parent-path settings and Odoo `/offering/` paths no longer determine the destination.
-Existing pages at old paths are left in place; update the component to create the new pages.
+The destination is always `/resources/{model}/{id}`; Odoo page paths do not
+determine the Plone location.
 
 For an on-demand full refresh, send a POST request to `@@agora-sync-all` on the
 site root. The endpoint scans the website for every `catalogue-model` used by
@@ -54,9 +54,9 @@ an Agora component and synchronizes each unique model. It requires the
 the background and there is no scheduler configuration in the addon.
 
 Embedded CSS from the HTML response is preserved, including media attributes.
-Relative image and CSS asset URLs resolve against Odoo. Older responses with
-stylesheet links remain supported. Created documents use the site's default
-workflow state; publish them using the normal Plone workflow when ready.
+Relative image and CSS asset URLs resolve against Odoo. Created documents use
+the site's default workflow state; publish them using the normal Plone workflow
+when ready.
 
 Synchronized components always open detail pages in the parent Plone window.
 The loader passes `detail_domain` and `detail_model` to the embedded catalogue.
@@ -347,5 +347,5 @@ requereix que el component existeixi abans del registre, caldrà un petit loader
 personalitzat que creï el component abans de carregar el bundle.
 
 The loader resource path must not contain a query string: Plone uses the actual
-resource bytes for its integrity hash and automatic asset versioning. The installer
-disables the matching legacy manual Agora bundle so the loader owns initialization.
+resource bytes for its integrity hash and automatic asset versioning. The addon
+registers only this loader, which owns component initialization.
